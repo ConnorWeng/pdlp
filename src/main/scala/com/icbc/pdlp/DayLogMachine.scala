@@ -11,7 +11,7 @@ import org.apache.spark.rdd.RDD
 class DayLogMachine extends LogMachine {
   private val dateFormat = new SimpleDateFormat("yyyyMMdd")
 
-  override def process(material: RDD[String]): RDD[String] = {
+  override def process(material: RDD[LogRecord]): RDD[LogRecord] = {
     material
   }
 

@@ -16,6 +16,7 @@ object LogParser {
     val rawMaterial = sc.textFile(sys.env("log_path"))
       .filter(_ != "")
       .flatMap(parseJsonLine)
+      .map(buildRecord)
 
     new LogWorkshop(rawMaterial, List(new DurationLogMachine, new DayLogMachine))
       .process()
@@ -52,5 +53,10 @@ object LogParser {
     })
 
     result
+  }
+
+  def buildRecord(line: String): LogRecord = {
+    val parts = line.split(",", 8)
+    new LogRecord(parts(0), parts(1), parts(2), parts(3), parts(4), parts(5), parts(6), parts(7))
   }
 }
