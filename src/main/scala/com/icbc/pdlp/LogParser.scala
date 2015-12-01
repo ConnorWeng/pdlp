@@ -9,6 +9,14 @@ import org.json4s.native.JsonParser
   * Created by ConnorWeng on 2015/11/12.
   */
 object LogParser {
+
+  implicit class String2LogRecord(line: String) {
+    def mkLogRecord = {
+      val parts = line.split(",", 8)
+      new LogRecord(parts(0), parts(1), parts(2), parts(3), parts(4), parts(5), parts(6), parts(7))
+    }
+  }
+
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("pai-distributed-log-parser").setMaster("local")
     val sc = new SparkContext(conf)
@@ -16,7 +24,7 @@ object LogParser {
     val rawMaterial = sc.textFile(sys.env("log_path"))
       .filter(_ != "")
       .flatMap(parseJsonLine)
-      .map(buildRecord)
+      .map(_.mkLogRecord)
 
     new LogWorkshop(rawMaterial, List(new DurationLogMachine, new DayLogMachine))
       .process()
@@ -37,7 +45,6 @@ object LogParser {
       if pas.toList(0).isInstanceOf[JObject]
       pa <- pas
     } yield (lineValue \ "appid", lineValue \ "mid", session \ "sid", pa)
-
     sessionList.foreach(x => {
       val appid = x._1.values
       val mid = x._2.values
@@ -51,12 +58,6 @@ object LogParser {
       val o = compact(render(other))
       result = result ::: List(s"$appid,$mid,$sid,$t,$p,$e,$ctpMenu,$o")
     })
-
     result
-  }
-
-  def buildRecord(line: String): LogRecord = {
-    val parts = line.split(",", 8)
-    new LogRecord(parts(0), parts(1), parts(2), parts(3), parts(4), parts(5), parts(6), parts(7))
   }
 }
