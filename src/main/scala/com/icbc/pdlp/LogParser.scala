@@ -10,7 +10,7 @@ import org.json4s.native.JsonParser
   */
 object LogParser {
   def main(args: Array[String]): Unit = {
-    val conf = new SparkConf().setAppName("pai-log-parser").setMaster("local")
+    val conf = new SparkConf().setAppName("pai-distributed-log-parser").setMaster("local")
     val sc = new SparkContext(conf)
 
     val rawMaterial = sc.textFile(sys.env("log_path"))
