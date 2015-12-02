@@ -13,7 +13,7 @@ object LogParser {
   implicit class String2LogRecord(line: String) {
     def mkLogRecord = {
       val parts = line.split(",", 8)
-      new LogRecord(parts(0), parts(1), parts(2), parts(3), parts(4), parts(5), parts(6), parts(7))
+      new LogRecord(parts(0), parts(1), parts(2), parts(3), parts(4), parts(5), parts(6), parts(7), "")
     }
   }
 

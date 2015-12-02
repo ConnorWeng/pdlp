@@ -11,7 +11,7 @@ import org.scalatest.{FunSpec, ShouldMatchers}
 class MenuLogMachineSpec extends FunSpec with ShouldMatchers {
   describe("process") {
     it("should set menu field on pageload record according to preceding click record") {
-      val sc = new SparkContext(new SparkConf().setAppName("DurationLogMachineSpec").setMaster("local"))
+      val sc = new SparkContext(new SparkConf().setAppName("MenuLogMachineSpec").setMaster("local"))
       val rdd: RDD[LogRecord] = sc.parallelize(List(
         "http://82.200.46.140,d418500a-1596-af34-f4a1-74dd215508fb,GDGGAKGTFRIEBMHGGLBJCWHQJVGZETJKAJJSAFJK,1444272812234,/cmas/servlet/com.icbc.cte.cs.servlet.CSReqServlet,click,某菜单,{}".mkLogRecord,
         "http://82.200.46.140,98jud00a-1596-af34-f4a1-74dd21550iuj,KKKGAKGTFRIEBMHGGLBJCWHQJVGZETJKAJJSAJJJ,1444272812237,/cmas/servlet/com.icbc.cte.cs.servlet.CSReqServlet,pageload,,{}".mkLogRecord,

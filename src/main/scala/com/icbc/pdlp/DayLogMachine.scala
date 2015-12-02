@@ -1,7 +1,7 @@
 package com.icbc.pdlp
 
+import java.lang
 import java.text.SimpleDateFormat
-import java.util.Date
 
 import org.apache.spark.rdd.RDD
 
@@ -9,13 +9,11 @@ import org.apache.spark.rdd.RDD
   * Created by ConnorWeng on 2015/11/27.
   */
 class DayLogMachine extends LogMachine {
-  private val dateFormat = new SimpleDateFormat("yyyyMMdd")
-
   override def process(material: RDD[LogRecord]): RDD[LogRecord] = {
-    material
-  }
-
-  private def formatDate(timestamp: Long): String = {
-    dateFormat.format(new Date(timestamp))
+    material.map(record => {
+      val dateFormat = new SimpleDateFormat("yyyyMMdd")
+      record.date = dateFormat.format(lang.Long.parseLong(record.timestamp))
+      record
+    })
   }
 }
