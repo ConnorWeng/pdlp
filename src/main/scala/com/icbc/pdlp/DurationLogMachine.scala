@@ -43,6 +43,6 @@ class DurationLogMachine extends LogMachine {
         }
         result
       })
-    durationRdd.union(remainRdd)
+    durationRdd.union(remainRdd).sortBy(_.timestamp)
   }
 }
