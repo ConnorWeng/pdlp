@@ -30,7 +30,7 @@ class DurationLogMachine extends LogMachine {
           if (e1 == "pageload" && iter.hasNext) {
             val (e2, t2, m2, o2) = iter.next()
             if (e2 == "unload") {
-              result = result ::: List(s"${t._1._1},${t._1._2},${t._1._3},${t2},${t._1._4},duration,,${t2.toLong - t1.toLong}".mkLogRecord)
+              result = result ::: List(s"${t._1._1},${t._1._2},${t._1._3},${t2},${t._1._4},duration,$m1,${t2.toLong - t1.toLong}".mkLogRecord)
               takeNext = true
             } else {
               e1 = e2
