@@ -28,8 +28,8 @@ object LogParser {
 
     new LogWorkshop(rawMaterial, List(new MenuLogMachine, new DurationLogMachine, new DayLogMachine))
       .process()
-      .sendTo(new MenuLogDealer(new MySQLLogConsumer))
-      .sendTo(new PageLogDealer(new MySQLLogConsumer))
+      .sendTo(new MenuLogDealer(new MySQLLogConsumer, sc))
+      .sendTo(new PageLogDealer(new MySQLLogConsumer, sc))
 
     sc.stop()
   }
