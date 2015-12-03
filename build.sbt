@@ -9,5 +9,8 @@ lazy val root = (project in file("."))
     .settings(commonSettings: _*)
     .settings(
       name := "pdlp",
-      libraryDependencies += "org.json4s" %% "json4s-native" % "3.2.11"
+      libraryDependencies ++= Seq(
+        "org.json4s" %% "json4s-native" % "3.2.11",
+        "mysql" % "mysql-connector-java" % "5.1.37"
+      )
     )

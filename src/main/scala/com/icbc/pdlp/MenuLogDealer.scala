@@ -12,9 +12,9 @@ class MenuLogDealer(consumer: LogConsumer, sc: SparkContext) extends LogDealer(c
     val sqlContext = new SQLContext(sc)
     import sqlContext.implicits._
 
-    val table = material.toDF().registerTempTable("records")
+    material.toDF().registerTempTable("records")
 
-    sqlContext.sql("""
+    consumer.consume(sqlContext.sql("""
       select
         appId, mid, menu, page,
         count(1) clicks, sum(other) duration,
@@ -22,6 +22,6 @@ class MenuLogDealer(consumer: LogConsumer, sc: SparkContext) extends LogDealer(c
       from records
       where event = 'duration' and menu != ''
       group by appId,mid,date,menu,page
-      """.stripMargin).show(false)
+      """.stripMargin), "menu_view")
   }
 }
