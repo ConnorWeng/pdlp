@@ -26,7 +26,7 @@ object LogParser {
       .flatMap(parseJsonLine)
       .map(_.mkLogRecord)
 
-    new LogWorkshop(rawMaterial, List(new MenuLogMachine, new DurationLogMachine, new DayLogMachine))
+    new LogWorkshop(rawMaterial, List(new MenuLogMachine, new DurationLogMachine, new DayLogMachine, new ClickLogMachine))
       .process()
       .sendTo(new MenuLogDealer(new MySQLLogConsumer, sc))
       .sendTo(new PageLogDealer(new MySQLLogConsumer, sc))
