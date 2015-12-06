@@ -16,7 +16,8 @@ class DurationLogMachine extends LogMachine {
       .groupByKey()
       .flatMap(t => {
         var result = List[LogRecord]()
-        val iter = t._2.iterator
+        val sorted = t._2.toList.sortBy(_._2)
+        val iter = sorted.iterator
         var takeNext = true
         var (e1, t1, m1, o1) = ("", "", "", "")
         while (iter.hasNext) {

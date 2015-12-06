@@ -15,7 +15,8 @@ class MenuLogMachine extends LogMachine {
       .groupByKey()
       .flatMap(t => {
         var result = List[LogRecord]()
-        val iterator = t._2.iterator
+        val sorted = t._2.toList.sortBy(_._3)
+        val iterator = sorted.iterator
         var nextMenu = ""
         while (iterator.hasNext) {
           val v = iterator.next()
