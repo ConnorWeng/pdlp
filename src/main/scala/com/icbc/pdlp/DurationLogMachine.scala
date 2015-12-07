@@ -1,7 +1,7 @@
 package com.icbc.pdlp
 
 import org.apache.spark.rdd.RDD
-import com.icbc.pdlp.LogParser.String2LogRecord
+import com.icbc.pdlp.LogRecord.String2LogRecord
 
 /**
   * Created by ConnorWeng on 2015/11/26.

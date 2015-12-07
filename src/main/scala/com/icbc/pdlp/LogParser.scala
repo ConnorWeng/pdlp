@@ -1,5 +1,6 @@
 package com.icbc.pdlp
 
+import com.icbc.pdlp.LogRecord.String2LogRecord
 import org.apache.spark.{SparkConf, SparkContext}
 import org.json4s.JsonAST._
 import org.json4s.jackson.JsonMethods._
@@ -9,13 +10,6 @@ import org.json4s.native.JsonParser
   * Created by ConnorWeng on 2015/11/12.
   */
 object LogParser {
-
-  implicit class String2LogRecord(line: String) {
-    def mkLogRecord = {
-      val parts = line.split(",", 8)
-      new LogRecord(parts(0), parts(1), parts(2), parts(3), parts(4), parts(5), parts(6), parts(7), "")
-    }
-  }
 
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("pai-distributed-log-parser").setMaster("local")
