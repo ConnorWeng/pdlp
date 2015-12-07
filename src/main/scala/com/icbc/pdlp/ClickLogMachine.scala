@@ -12,9 +12,10 @@ class ClickLogMachine extends LogMachine {
       if (record.event == "click") {
         val otherValue = JsonParser.parse(record.other)
         val srcElement = (otherValue \ "srcElement").values
-        record.other = srcElement.toString
+        record.copy(other = srcElement.toString)
+      } else {
+        record
       }
-      record
     })
   }
 }

@@ -12,8 +12,7 @@ class DayLogMachine extends LogMachine {
   override def process(material: RDD[LogRecord]): RDD[LogRecord] = {
     material.map(record => {
       val dateFormat = new SimpleDateFormat("yyyyMMdd")
-      record.date = dateFormat.format(lang.Long.parseLong(record.timestamp))
-      record
+      record.copy(date = dateFormat.format(lang.Long.parseLong(record.timestamp)))
     })
   }
 }
