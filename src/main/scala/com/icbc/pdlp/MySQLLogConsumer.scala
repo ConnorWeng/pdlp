@@ -12,7 +12,7 @@ class MySQLLogConsumer extends LogConsumer() {
     val properties = new Properties()
     properties.put("user", sys.env("mysql_user"))
     properties.put("password", sys.env("mysql_pass"))
-    production.write.mode(SaveMode.Append)
+    production.write.mode(SaveMode.Overwrite)
       .jdbc(sys.env("mysql_url"), tableName, properties)
   }
 }
