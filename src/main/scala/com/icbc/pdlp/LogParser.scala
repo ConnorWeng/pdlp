@@ -24,6 +24,10 @@ object LogParser {
       .process()
       .sendTo(new MenuLogDealer(new MySQLLogConsumer, sc))
 
+    new LogWorkshop(rawMaterial, List(new InteractivityLogMachine))
+      .process()
+      .sendTo(new InteractivityLogDealer(new MySQLLogConsumer, sc))
+
     sc.stop()
   }
 
