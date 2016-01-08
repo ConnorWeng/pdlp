@@ -15,7 +15,7 @@ class MenuLogDealer(consumer: LogConsumer, sc: SparkContext) extends LogDealer(c
     material.toDF().registerTempTable("records")
     val menuDF = sqlContext.sql("""
       select
-        max(uuid) uuid, appId, mid, menu, page,
+        appId, mid, menu, page,
         count(1) clicks, sum(other) duration,
         date, min(timestamp) start_time, max(timestamp) end_time
       from records
@@ -30,7 +30,7 @@ class MenuLogDealer(consumer: LogConsumer, sc: SparkContext) extends LogDealer(c
       """
         |select
         |  r.appId, r.mid, r.page, r.other srcElement, count(1) clicks,
-        |  r.date, min(r.timestamp) start_time, max(r.timestamp) end_time, max(v.uuid) uuid
+        |  r.date, min(r.timestamp) start_time, max(r.timestamp) end_time
         |from page_records r join menu_view v on r.appId = v.appId and r.mid = v.mid and r.page = v.page and r.date = v.date
         |where r.event = 'click'
         |group by r.appId,r.mid,r.date,r.page,r.other
