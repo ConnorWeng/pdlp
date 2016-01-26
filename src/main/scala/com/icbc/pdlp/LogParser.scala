@@ -1,7 +1,8 @@
 package com.icbc.pdlp
 
 import com.icbc.pdlp.LogRecord.String2LogRecord
-import com.icbc.pdlp.db.AppDAO
+import com.icbc.pdlp.db.{AppDAO, MachineDAO}
+import com.icbc.pdlp.model.Machine
 import org.apache.spark.{SparkConf, SparkContext}
 import org.json4s.JsonAST._
 import org.json4s.jackson.JsonMethods._
@@ -26,6 +27,9 @@ object LogParser {
     val appUrls = material.map(_.appId).distinct().collect().toList
     val appMap = makeAppMap(appUrls)
 
+    val machineCodes = material.map(_.mid).distinct().collect().toList
+    val machineMap = makeMachineMap(machineCodes)
+
     sc.stop()
   }
 
@@ -34,6 +38,16 @@ object LogParser {
       .filter(app => appUrls.contains(app.appUrl))
       .map(app => (app.appUrl -> app.appId))
       .toMap
+  }
+
+  def makeMachineMap(machineCodes: List[String]): Map[String, Int] = {
+    val existMachines = MachineDAO.findAll
+    val existMachineCodes = existMachines.map(_.machineCode)
+    val nonexistMachineCodes = machineCodes.filter(!existMachineCodes.contains(_))
+    MachineDAO.save(nonexistMachineCodes.map { machineCode =>
+      Machine(0, machineCode, machineCode, "", "", 0, 0)
+    })
+    MachineDAO.findAll.map(machine => (machine.machineCode -> machine.machineId)).toMap
   }
 
   def parseJsonLine(line: String): List[String] = {
