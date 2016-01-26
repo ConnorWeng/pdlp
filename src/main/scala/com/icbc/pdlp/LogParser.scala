@@ -1,8 +1,10 @@
 package com.icbc.pdlp
 
+import java.text.SimpleDateFormat
+
 import com.icbc.pdlp.LogRecord.String2LogRecord
-import com.icbc.pdlp.db.{AppDAO, MachineDAO, ModuleDAO, PageDAO}
-import com.icbc.pdlp.model.{Machine, Module, Page}
+import com.icbc.pdlp.db._
+import com.icbc.pdlp.model.{Machine, Module, Page, PageEvent}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.json4s.JsonAST._
@@ -23,7 +25,8 @@ object LogParser {
       .flatMap(parseJsonLine)
       .map(_.mkLogRecord)
 
-    val material = new LogWorkshop(rawMaterial, List(new DayLogMachine, new MenuLogMachine)).process().material
+    // FIXME: this line of code may be not work correctly
+    val material = new MenuLogMachine().process(rawMaterial)
 
     val appUrls = material.map(_.appId).collect().distinct.toList
     val appMap = makeAppMap(appUrls)
@@ -36,6 +39,15 @@ object LogParser {
 
     val pageUrls = material.map(_.page).collect().distinct.toList
     val pageMap = makePageMap(pageUrls, material, appMap, moduleMap)
+
+    material.foreachPartition { ms =>
+      val dateFormat = new SimpleDateFormat("yyyyMMdd")
+      PageEventDAO.save(ms.toList.map { r =>
+        // TODO: use DayLogMachine
+        val date = dateFormat.format(r.timestamp.toLong).toInt
+        PageEvent(0, machineMap.getOrElse(r.mid, 0), r.sid, r.timestamp.toLong, pageMap.getOrElse(r.page, 0), r.event, r.other, date)
+      })
+    }
 
     sc.stop()
   }
