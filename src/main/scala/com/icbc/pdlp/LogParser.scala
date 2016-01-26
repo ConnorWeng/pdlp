@@ -1,7 +1,7 @@
 package com.icbc.pdlp
 
 import com.icbc.pdlp.LogRecord.String2LogRecord
-import com.icbc.pdlp.model.PageEvent
+import com.icbc.pdlp.db.AppDAO
 import org.apache.spark.{SparkConf, SparkContext}
 import org.json4s.JsonAST._
 import org.json4s.jackson.JsonMethods._
@@ -21,9 +21,19 @@ object LogParser {
       .flatMap(parseJsonLine)
       .map(_.mkLogRecord)
 
-    val material = new LogWorkshop(rawMaterial, List(new DayLogMachine, new MenuLogMachine)).material
+    val material = new LogWorkshop(rawMaterial, List(new DayLogMachine, new MenuLogMachine)).process().material
+
+    val appUrls = material.map(_.appId).distinct().collect().toList
+    val appMap = makeAppMap(appUrls)
 
     sc.stop()
+  }
+
+  def makeAppMap(appUrls: List[String]): Map[String, Int] = {
+    AppDAO.findAll
+      .filter(app => appUrls.contains(app.appUrl))
+      .map(app => (app.appUrl -> app.appId))
+      .toMap
   }
 
   def parseJsonLine(line: String): List[String] = {
