@@ -1,8 +1,8 @@
 package com.icbc.pdlp
 
 import com.icbc.pdlp.LogRecord.String2LogRecord
-import com.icbc.pdlp.db.{AppDAO, MachineDAO, ModuleDAO}
-import com.icbc.pdlp.model.{Machine, Module}
+import com.icbc.pdlp.db.{AppDAO, MachineDAO, ModuleDAO, PageDAO}
+import com.icbc.pdlp.model.{Machine, Module, Page}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.json4s.JsonAST._
@@ -34,6 +34,9 @@ object LogParser {
     val machineCodes = material.map(_.mid).collect().distinct.toList
     val machineMap = makeMachineMap(machineCodes)
 
+    val pageUrls = material.map(_.page).collect().distinct.toList
+    val pageMap = makePageMap(pageUrls, material, appMap, moduleMap)
+
     sc.stop()
   }
 
@@ -62,6 +65,17 @@ object LogParser {
       Module(0, m.menu, "", appMap(m.appId))
     ).collect().distinct.toList)
     ModuleDAO.findAll.map(module => (module.moduleName -> module.moduleId)).toMap
+  }
+
+  def makePageMap(pageUrls: List[String], material: RDD[LogRecord], appMap: Map[String, Int], moduleMap: Map[String, Int]): Map[String, Int] = {
+    val existPages = PageDAO.findAll
+    val existPageUrls = existPages.map(_.pageUrl)
+    val nonexistPageUrls = pageUrls.filter(!existPageUrls.contains(_))
+    // FIXME: must have duplicated records because of module_id
+    PageDAO.save(material.filter(m => nonexistPageUrls.contains(m.page)).map(m =>
+      Page(0, m.page, appMap.getOrElse(m.appId, 0), moduleMap.getOrElse(m.menu, 0))
+    ).collect().distinct.toList)
+    PageDAO.findAll.map(page => (page.pageUrl -> page.pageId)).toMap
   }
 
   def parseJsonLine(line: String): List[String] = {
