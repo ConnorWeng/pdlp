@@ -1,6 +1,7 @@
 package com.icbc.pdlp
 
 import com.icbc.pdlp.LogRecord.String2LogRecord
+import com.icbc.pdlp.model.PageEvent
 import org.apache.spark.{SparkConf, SparkContext}
 import org.json4s.JsonAST._
 import org.json4s.jackson.JsonMethods._
@@ -20,13 +21,7 @@ object LogParser {
       .flatMap(parseJsonLine)
       .map(_.mkLogRecord)
 
-    new LogWorkshop(rawMaterial, List(new MenuLogMachine, new DurationLogMachine, new DayLogMachine, new ClickLogMachine))
-      .process()
-      .sendTo(new MenuLogDealer(new MySQLLogConsumer, sc))
-
-    new LogWorkshop(rawMaterial, List(new InteractivityLogMachine))
-      .process()
-      .sendTo(new InteractivityLogDealer(new MySQLLogConsumer, sc))
+    val material = new LogWorkshop(rawMaterial, List(new DayLogMachine, new MenuLogMachine)).material
 
     sc.stop()
   }
