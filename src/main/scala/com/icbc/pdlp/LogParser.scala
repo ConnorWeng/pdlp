@@ -25,13 +25,13 @@ object LogParser {
 
     val material = new LogWorkshop(rawMaterial, List(new DayLogMachine, new MenuLogMachine)).process().material
 
-    val appUrls = material.map(_.appId).distinct().collect().toList
+    val appUrls = material.map(_.appId).collect().distinct.toList
     val appMap = makeAppMap(appUrls)
 
-    val moduleNames = material.map(_.menu).filter(_ != "").distinct().collect().toList
+    val moduleNames = material.map(_.menu).filter(_ != "").collect().distinct.toList
     val moduleMap = makeModuleMap(moduleNames, material, appMap)
 
-    val machineCodes = material.map(_.mid).distinct().collect().toList
+    val machineCodes = material.map(_.mid).collect().distinct.toList
     val machineMap = makeMachineMap(machineCodes)
 
     sc.stop()
@@ -59,8 +59,8 @@ object LogParser {
     val existModuleNames = existModules.map(_.moduleName)
     val nonexistModuleNames = moduleNames.filter(!existModuleNames.contains(_))
     ModuleDAO.save(material.filter(m => nonexistModuleNames.contains(m.menu)).map(m =>
-      Module(0, m.menu, m.page, appMap(m.appId))
-    ).collect().toList)
+      Module(0, m.menu, "", appMap(m.appId))
+    ).collect().distinct.toList)
     ModuleDAO.findAll.map(module => (module.moduleName -> module.moduleId)).toMap
   }
 
