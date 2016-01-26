@@ -1,8 +1,9 @@
 package com.icbc.pdlp
 
 import com.icbc.pdlp.LogRecord.String2LogRecord
-import com.icbc.pdlp.db.{AppDAO, MachineDAO}
-import com.icbc.pdlp.model.Machine
+import com.icbc.pdlp.db.{AppDAO, MachineDAO, ModuleDAO}
+import com.icbc.pdlp.model.{Machine, Module}
+import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.json4s.JsonAST._
 import org.json4s.jackson.JsonMethods._
@@ -27,6 +28,9 @@ object LogParser {
     val appUrls = material.map(_.appId).distinct().collect().toList
     val appMap = makeAppMap(appUrls)
 
+    val moduleNames = material.map(_.menu).filter(_ != "").distinct().collect().toList
+    val moduleMap = makeModuleMap(moduleNames, material, appMap)
+
     val machineCodes = material.map(_.mid).distinct().collect().toList
     val machineMap = makeMachineMap(machineCodes)
 
@@ -48,6 +52,16 @@ object LogParser {
       Machine(0, machineCode, machineCode, "", "", 0, 0)
     })
     MachineDAO.findAll.map(machine => (machine.machineCode -> machine.machineId)).toMap
+  }
+
+  def makeModuleMap(moduleNames: List[String], material: RDD[LogRecord], appMap: Map[String, Int]): Map[String, Int] = {
+    val existModules = ModuleDAO.findAll
+    val existModuleNames = existModules.map(_.moduleName)
+    val nonexistModuleNames = moduleNames.filter(!existModuleNames.contains(_))
+    ModuleDAO.save(material.filter(m => nonexistModuleNames.contains(m.menu)).map(m =>
+      Module(0, m.menu, m.page, appMap(m.appId))
+    ).collect().toList)
+    ModuleDAO.findAll.map(module => (module.moduleName -> module.moduleId)).toMap
   }
 
   def parseJsonLine(line: String): List[String] = {
