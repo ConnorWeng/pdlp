@@ -12,7 +12,7 @@ import org.scalatest.{FunSpec, ShouldMatchers}
   */
 class HBaseClientSpec extends FunSpec with ShouldMatchers {
   describe("HBaseClientSpec") {
-    it("should print all data in test table") {
+    ignore("should print all data in test table") {
       val config = HBaseConfiguration.create()
       config.addResource(new Path(sys.env("HBASE_CONF_DIR"), "hbase-site.xml"))
       val con = ConnectionFactory.createConnection(config)
