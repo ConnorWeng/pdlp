@@ -32,13 +32,15 @@ object PageEventTableWriter {
     config.addResource(new Path(sys.env("HBASE_CONF_DIR"), "hbase-site.xml"))
     val hbaseContext = new HBaseContext(sc, config)
 
-    hbaseContext.bulkPut[LogRecord](recordsRdd, "page_event", (record) => {
-      val rowKey = makeRowKey(record)
-      val put = new Put(rowKey.getBytes)
-      put.addColumn("pe".getBytes, "appid".getBytes, record.appId.getBytes)
-      put.addColumn("pe".getBytes, "mid".getBytes, record.mid.getBytes)
-      put
-    }, true)
+    hbaseContext.bulkPut[LogRecord](recordsRdd, "page_event", recordToPut, true)
+  }
+
+  def recordToPut(record: LogRecord): Put = {
+    val rowKey = makeRowKey(record)
+    val put = new Put(rowKey.getBytes)
+    put.addColumn("pe".getBytes, "appid".getBytes, record.appId.getBytes)
+    put.addColumn("pe".getBytes, "mid".getBytes, record.mid.getBytes)
+    put
   }
 
   def makeRowKey(record: LogRecord): String = {
