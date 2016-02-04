@@ -3,6 +3,7 @@ package com.icbc.pdlp
 import java.lang.Long
 import java.text.SimpleDateFormat
 
+import akka.util.Crypt.md5
 import com.cloudera.spark.hbase.HBaseContext
 import com.icbc.pdlp.LogRecord._
 import org.apache.hadoop.fs.Path
@@ -34,13 +35,13 @@ object PageEventTableWriter {
     hbaseContext.bulkPut[LogRecord](recordsRdd, "page_event", (record) => {
       val rowKey = makeRowKey(record)
       val put = new Put(rowKey.getBytes)
-      put.addColumn("pe".getBytes, "appname".getBytes, record.appId.getBytes)
+      put.addColumn("pe".getBytes, "appid".getBytes, record.appId.getBytes)
       put.addColumn("pe".getBytes, "mid".getBytes, record.mid.getBytes)
       put
     }, true)
   }
 
   def makeRowKey(record: LogRecord): String = {
-    record.appId + record.mid + record.page + (Long.MAX_VALUE - Long.parseLong(record.timestamp))
+    md5(record.appId) + md5(record.mid) + md5(record.page) + record.timestamp
   }
 }
