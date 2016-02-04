@@ -16,12 +16,12 @@ import org.apache.spark.{SparkConf, SparkContext}
   */
 object PageEventTableWriter {
   def main(args: Array[String]) = {
-    // TODO: read file, parse file, write to HFile
-    val conf = new SparkConf().setAppName("pai-distributed-log-parser-hfilewriter").setMaster("local")
+    val conf = new SparkConf().setAppName("pai-distributed-log-parser-PageEventTableWriter").setMaster("local")
     val sc = new SparkContext(conf)
 
     val dateFormat = new SimpleDateFormat("yyyyMMdd")
 
+    // TODO: read from directory
     val recordsRdd = sc.textFile(sys.env("log_path"))
       .filter(_ != "")
       .flatMap(LogParser.parseJsonLine)
