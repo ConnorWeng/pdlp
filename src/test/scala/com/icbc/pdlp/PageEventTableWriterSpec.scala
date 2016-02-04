@@ -1,6 +1,8 @@
 package com.icbc.pdlp
 
 import com.icbc.pdlp.LogRecord._
+import org.apache.hadoop.hbase.Cell
+import org.apache.hadoop.hbase.client.Put
 import org.scalatest.{FunSpec, ShouldMatchers}
 
 /**
@@ -17,14 +19,26 @@ class PageEventTableWriterSpec extends FunSpec with ShouldMatchers {
   }
 
   describe("recordToPut") {
-    val record = "http://82.200.46.140,d418500a-1596-af34-f4a1-74dd215508fb,GDGGAKGTFRIEBMHGGLBJCWHQJVGZETJKAJJSAFJK,1444272812234,/cmas/servlet/com.icbc.cte.cs.servlet.CSReqServlet,keyup,,{\"e\":\"keyup\",\"keyCode\":18,\"ctrlKey\":false,\"altKey\":false,\"shiftKey\":false,\"srcElement\":\"BODY\"}".mkLogRecord
-    it("should contains appid column") {
-      val put = PageEventTableWriter.recordToPut(record)
-      val cell = put.get("pe".getBytes, "appid".getBytes).get(0)
+    val record = "http://82.200.46.140,d418500a-1596-af34-f4a1-74dd215508fb,GDGGAKGTFRIEBMHGGLBJCWHQJVGZETJKAJJSAFJK,1444272812234,/cmas/servlet/com.icbc.cte.cs.servlet.CSReqServlet,keyup,,{\"e\":\"keyup\",\"x\":15,\"keyCode\":18,\"ctrlKey\":false,\"altKey\":false,\"shiftKey\":false,\"srcElement\":\"BODY\"}".mkLogRecord
+    val put = PageEventTableWriter.recordToPut(record)
+
+    it("should contains columns exactly") {
+      valueOf(cellOf(put, "appid")) should be("http://82.200.46.140")
+      valueOf(cellOf(put, "timestamp")) should be("1444272812234")
+      valueOf(cellOf(put, "e")) should be("keyup")
+      valueOf(cellOf(put, "keycode")) should be("18")
+      valueOf(cellOf(put, "x")) should be("15")
+    }
+
+    def cellOf(put: Put, columnName: String) = {
+      put.get("pe".getBytes, columnName.getBytes).get(0)
+    }
+
+    def valueOf(cell: Cell): String = {
       val valueBytes = cell.getValueArray
       val valueOffset = cell.getValueOffset
       val value = new String(valueBytes.splitAt(valueOffset)._2)
-      value should be("http://82.200.46.140")
+      value
     }
   }
 }
