@@ -116,4 +116,15 @@ object LogParser {
     })
     result
   }
+
+  def parseOther(other: String): List[(String, String)] = {
+    val otherValue = JsonParser.parse(other)
+    otherValue.asInstanceOf[JObject].obj.map { field =>
+      if (field._2.values.isInstanceOf[Map[Any, Any]]) {
+        (field._1.toLowerCase, compact(render(field._2)))
+      } else {
+        (field._1.toLowerCase, field._2.values.toString)
+      }
+    }
+  }
 }

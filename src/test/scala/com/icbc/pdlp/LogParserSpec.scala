@@ -71,4 +71,17 @@ class LogParserSpec extends FunSpec with ShouldMatchers {
         "http://83.24.113.34,6aefcb9e-f2a5-5d86-33ea-f7b1359c2437,1447029967059,1447029967097,/cmas/index2.jsp,mousemove,任意菜单,{\"e\":\"mousemove\",\"ctpmenu\":\"任意菜单\"}"))
     }
   }
+
+  describe("parseOther") {
+    it("should return list of tuple2") {
+      LogParser.parseOther(
+        "{\"e\":\"keyup\",\"keyCode\":18,\"ctrlKey\":false}"
+      ) should be(List(("e", "keyup"), ("keycode", "18"), ("ctrlkey", "false")))
+    }
+    it("should return list of tuple2 with sc value untouched") {
+      LogParser.parseOther(
+        "{\"sc\":{\"x\":1402,\"y\":890,\"xp\":11454,\"yp\":10974}}"
+      ) should be(List(("sc", "{\"x\":1402,\"y\":890,\"xp\":11454,\"yp\":10974}")))
+    }
+  }
 }
