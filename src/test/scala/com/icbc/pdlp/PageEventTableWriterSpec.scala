@@ -24,7 +24,11 @@ class PageEventTableWriterSpec extends FunSpec with ShouldMatchers {
 
     it("should contains columns exactly") {
       valueOf(cellOf(put, "appid")) should be("http://82.200.46.140")
+      valueOf(cellOf(put, "mid")) should be("d418500a-1596-af34-f4a1-74dd215508fb")
+      valueOf(cellOf(put, "sid")) should be("GDGGAKGTFRIEBMHGGLBJCWHQJVGZETJKAJJSAFJK")
+      valueOf(cellOf(put, "page")) should be("/cmas/servlet/com.icbc.cte.cs.servlet.CSReqServlet")
       valueOf(cellOf(put, "timestamp")) should be("1444272812234")
+      valueOf(cellOf(put, "other")) should be("{\"e\":\"keyup\",\"x\":15,\"keyCode\":18,\"ctrlKey\":false,\"altKey\":false,\"shiftKey\":false,\"srcElement\":\"BODY\"}")
       valueOf(cellOf(put, "e")) should be("keyup")
       valueOf(cellOf(put, "keycode")) should be("18")
       valueOf(cellOf(put, "x")) should be("15")

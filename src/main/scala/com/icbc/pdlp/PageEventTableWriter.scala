@@ -40,7 +40,10 @@ object PageEventTableWriter {
     val put = new Put(rowKey.getBytes)
     put.addColumn("pe".getBytes, "appid".getBytes, record.appId.getBytes)
     put.addColumn("pe".getBytes, "mid".getBytes, record.mid.getBytes)
+    put.addColumn("pe".getBytes, "sid".getBytes, record.sid.getBytes)
+    put.addColumn("pe".getBytes, "page".getBytes, record.page.getBytes)
     put.addColumn("pe".getBytes, "timestamp".getBytes, record.timestamp.getBytes)
+    put.addColumn("pe".getBytes, "other".getBytes, record.other.getBytes)
     val other = LogParser.parseOther(record.other)
     other.foreach { case (k, v) =>
       put.addColumn("pe".getBytes, k.getBytes, v.getBytes)
