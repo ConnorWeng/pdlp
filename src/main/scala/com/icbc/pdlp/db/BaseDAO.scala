@@ -7,7 +7,7 @@ import scala.util.{Failure, Try}
 /**
   * Created by ConnorWeng on 2016/1/26.
   */
-abstract class BaseDAO {
+class BaseDAO {
   val dbUrl = s"${sys.env("MYSQL_URL")}?user=${sys.env("MYSQL_USER")}&password=${sys.env("MYSQL_PASS")}"
 
   def withConnection(functionNeedConnection: (Connection) => Unit) = {
