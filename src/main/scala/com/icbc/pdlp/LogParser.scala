@@ -123,7 +123,11 @@ object LogParser {
       if (field._2.values.isInstanceOf[Map[Any, Any]]) {
         (field._1.toLowerCase, compact(render(field._2)))
       } else {
-        (field._1.toLowerCase, field._2.values.toString)
+        if (field._2 != JNull) {
+          (field._1.toLowerCase, field._2.values.toString)
+        } else {
+          (field._1.toLowerCase, "")
+        }
       }
     }
   }
