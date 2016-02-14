@@ -80,7 +80,7 @@ object VisitorMetrics {
             s"""
               |insert into archive_numeric(
               |  name, app_id, date1, date2, period, ts_archived, value)
-              |values (
+              |select
               |  'pageview',
               |  ${t._1},
               |  '${t._2}',
@@ -88,6 +88,13 @@ object VisitorMetrics {
               |  1,
               |  now(),
               |  ${t._3}
+              |from dual
+              |where not exists (
+              |  select 1 from archive_numeric
+              |  where name = 'pageview'
+              |  and app_id = ${t._1}
+              |  and date1 = '${t._2}'
+              |  and period = 1
               |);
             """.stripMargin
           stmt.addBatch(sql)
