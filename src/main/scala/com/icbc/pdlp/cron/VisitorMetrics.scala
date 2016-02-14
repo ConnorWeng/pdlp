@@ -29,11 +29,9 @@ object VisitorMetrics {
     val dailyRdd = getDailyRddFromHBase(sc)
     val appMap = AppDAO.findAll.map(app => (app.appUrl -> app.appId)).toMap
     generatePageViewDailyReport(dailyRdd, appMap)
+    generateUniqueVisitorDailyReport(dailyRdd, appMap)
 
     //TODO: insert into hbase table visitor_daily, column family vd
-    //    val uniqueVisitorDailyRdd = dailyRdd.map(t => ((t._1, t._2, t._5), 1))
-    //      .distinct().map(t => ((t._1._1, t._1._3), 1))
-    //      .reduceByKey((a, b) => a + b)
   }
 
   def getDailyRddFromHBase(sc: SparkContext): RDD[(String, String, String, String, String, String)] = {
@@ -63,14 +61,27 @@ object VisitorMetrics {
         val value = t._2
         (appId, date, value)
       })
-    insertMetrics(pageViewRdd)
+    insertMetrics(pageViewRdd, "pageview")
+  }
+
+  def generateUniqueVisitorDailyReport(dailyRdd: RDD[(String, String, String, String, String, String)], appMap: Map[String, Int]) = {
+    val uniqueVisitorDailyRdd = dailyRdd.map(t => ((t._1, t._2, t._5), 1))
+      .distinct().map(t => ((t._1._1, t._1._3), 1))
+      .reduceByKey((a, b) => a + b)
+      .map(t => {
+        val appId = getAppIdViaUrl(t._1._1, appMap)
+        val date = t._1._2
+        val value = t._2
+        (appId, date, value)
+      })
+    insertMetrics(uniqueVisitorDailyRdd, "uniquevisitor")
   }
 
   def getAppIdViaUrl(appUrl: String, appMap: Map[String, Int]): Int = {
     return appMap(appUrl)
   }
 
-  def insertMetrics(metricsRdd: RDD[(Int, String, Int)]) = {
+  def insertMetrics(metricsRdd: RDD[(Int, String, Int)], name: String) = {
     metricsRdd.foreachPartition { p =>
       val dao = new BaseDAO
       dao.withConnection { con =>
@@ -81,7 +92,7 @@ object VisitorMetrics {
               |insert into archive_numeric(
               |  name, app_id, date1, date2, period, ts_archived, value)
               |select
-              |  'pageview',
+              |  '$name',
               |  ${t._1},
               |  '${t._2}',
               |  '${t._2}',
@@ -91,7 +102,7 @@ object VisitorMetrics {
               |from dual
               |where not exists (
               |  select 1 from archive_numeric
-              |  where name = 'pageview'
+              |  where name = '$name'
               |  and app_id = ${t._1}
               |  and date1 = '${t._2}'
               |  and period = 1
