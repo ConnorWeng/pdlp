@@ -28,8 +28,10 @@ object VisitorMetrics {
 
     val dailyRdd = getDailyRddFromHBase(sc)
     val appMap = AppDAO.findAll.map(app => (app.appUrl -> app.appId)).toMap
+
     generatePageViewDailyReport(dailyRdd, appMap)
     generateUniqueVisitorDailyReport(dailyRdd, appMap)
+    generateSessionDailyReport(dailyRdd, appMap)
 
     //TODO: insert into hbase table visitor_daily, column family vd
   }
@@ -75,6 +77,19 @@ object VisitorMetrics {
         (appId, date, value)
       })
     insertMetrics(uniqueVisitorDailyRdd, "uniquevisitor")
+  }
+
+  def generateSessionDailyReport(dailyRdd: RDD[(String, String, String, String, String, String)], appMap: Map[String, Int]) = {
+    val sessionDailyRdd = dailyRdd.map(t => ((t._1, t._3, t._5), 1))
+      .distinct().map(t => ((t._1._1, t._1._3), 1))
+      .reduceByKey((a, b) => a + b)
+      .map(t => {
+        val appId = getAppIdViaUrl(t._1._1, appMap)
+        val date = t._1._2
+        val value = t._2
+        (appId, date, value)
+      })
+    insertMetrics(sessionDailyRdd, "session")
   }
 
   def getAppIdViaUrl(appUrl: String, appMap: Map[String, Int]): Int = {
