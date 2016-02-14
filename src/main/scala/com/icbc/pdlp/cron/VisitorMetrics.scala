@@ -2,7 +2,6 @@ package com.icbc.pdlp.cron
 
 import java.text.SimpleDateFormat
 
-import com.cloudera.spark.hbase.HBaseContext
 import com.icbc.pdlp.db.{AppDAO, BaseDAO}
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hbase.HBaseConfiguration
@@ -32,8 +31,6 @@ object VisitorMetrics {
     generatePageViewDailyReport(dailyRdd, appMap)
     generateUniqueVisitorDailyReport(dailyRdd, appMap)
     generateSessionDailyReport(dailyRdd, appMap)
-
-    //TODO: insert into hbase table visitor_daily, column family vd
   }
 
   def getDailyRddFromHBase(sc: SparkContext): RDD[(String, String, String, String, String, String)] = {
@@ -57,46 +54,35 @@ object VisitorMetrics {
   def generatePageViewDailyReport(dailyRdd: RDD[(String, String, String, String, String, String)], appMap: Map[String, Int]) = {
     val pageViewRdd = dailyRdd.map(t => ((t._1, t._5), 1))
       .reduceByKey((a, b) => a + b)
-      .map(t => {
-        val appId = getAppIdViaUrl(t._1._1, appMap)
-        val date = t._1._2
-        val value = t._2
-        (appId, date, value)
-      })
-    insertMetrics(pageViewRdd, "pageview")
+    archiveMetrics(pageViewRdd, "pageview", appMap)
   }
 
   def generateUniqueVisitorDailyReport(dailyRdd: RDD[(String, String, String, String, String, String)], appMap: Map[String, Int]) = {
     val uniqueVisitorDailyRdd = dailyRdd.map(t => ((t._1, t._2, t._5), 1))
-      .distinct().map(t => ((t._1._1, t._1._3), 1))
-      .reduceByKey((a, b) => a + b)
-      .map(t => {
-        val appId = getAppIdViaUrl(t._1._1, appMap)
-        val date = t._1._2
-        val value = t._2
-        (appId, date, value)
-      })
-    insertMetrics(uniqueVisitorDailyRdd, "uniquevisitor")
+      .distinct()
+      .map(t => ((t._1._1, t._1._3), 1))
+    archiveMetrics(uniqueVisitorDailyRdd, "uniquevisitor", appMap)
   }
 
   def generateSessionDailyReport(dailyRdd: RDD[(String, String, String, String, String, String)], appMap: Map[String, Int]) = {
     val sessionDailyRdd = dailyRdd.map(t => ((t._1, t._3, t._5), 1))
-      .distinct().map(t => ((t._1._1, t._1._3), 1))
-      .reduceByKey((a, b) => a + b)
+      .distinct()
+      .map(t => ((t._1._1, t._1._3), 1))
+    archiveMetrics(sessionDailyRdd, "session", appMap)
+  }
+
+  def archiveMetrics(pairRdd: RDD[((String, String), Int)], metricsName: String, appMap: Map[String, Int]) = {
+    val rdd = pairRdd.reduceByKey((a, b) => a + b)
       .map(t => {
-        val appId = getAppIdViaUrl(t._1._1, appMap)
+        val appId = appMap(t._1._1)
         val date = t._1._2
         val value = t._2
         (appId, date, value)
       })
-    insertMetrics(sessionDailyRdd, "session")
+    insertMetrics(rdd, metricsName)
   }
 
-  def getAppIdViaUrl(appUrl: String, appMap: Map[String, Int]): Int = {
-    return appMap(appUrl)
-  }
-
-  def insertMetrics(metricsRdd: RDD[(Int, String, Int)], name: String) = {
+  def insertMetrics(metricsRdd: RDD[(Int, String, Int)], metricsName: String) = {
     metricsRdd.foreachPartition { p =>
       val dao = new BaseDAO
       dao.withConnection { con =>
@@ -107,7 +93,7 @@ object VisitorMetrics {
               |insert into archive_numeric(
               |  name, app_id, date1, date2, period, ts_archived, value)
               |select
-              |  '$name',
+              |  '$metricsName',
               |  ${t._1},
               |  '${t._2}',
               |  '${t._2}',
@@ -117,7 +103,7 @@ object VisitorMetrics {
               |from dual
               |where not exists (
               |  select 1 from archive_numeric
-              |  where name = '$name'
+              |  where name = '$metricsName'
               |  and app_id = ${t._1}
               |  and date1 = '${t._2}'
               |  and period = 1
