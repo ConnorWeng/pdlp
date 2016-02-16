@@ -27,23 +27,29 @@ object ModuleMetrics {
         val appId = t._1._1
         val date = t._1._2
         val ctpmenu = t._1._3
+        val mid = t._1._4
         val count = t._2
-        ((appId, date), (ctpmenu, count))
+        ((appId, date), (ctpmenu, count, mid))
       })
       .groupByKey()
       .map(t => {
         val appId = t._1._1
         val date = t._1._2
-        val menuList = t._2.toList
+        val list = t._2.toList
+        val menuList = list
+          .groupBy(_._1)
+          .map(t => {
+            (t._1, t._2.map(_._2).sum, t._2.map(_._3).mkString(","))
+          })
         var blob = "{"
-        menuList.foreach(bt => blob += s""""${bt._1}":${bt._2},""")
+        menuList.foreach(bt => blob += s""""${bt._1}":[${bt._2},"${bt._3}"],""")
         blob = blob.substring(0, blob.size - 1) + "}"
         (appId, date, blob)
       })
     insertBlob(moduleDailyRdd, "module")
   }
 
-  def getDailyRddFromHBase(sc: SparkContext, appMap: Map[String,Int]): RDD[((Int, String, String), Int)] = {
+  def getDailyRddFromHBase(sc: SparkContext, appMap: Map[String,Int]): RDD[((Int, String, String, String), Int)] = {
     val config = HBaseConfiguration.create()
     config.addResource(new Path(sys.env("HBASE_CONF_DIR"), "hbase-site.xml"))
     config.set(TableInputFormat.INPUT_TABLE, "page_event")
@@ -53,10 +59,10 @@ object ModuleMetrics {
     rdd.map(_._2)
       .map(r => {
         implicit val result = r
-        (valueOf("appid"), valueOf("timestamp"), valueOf("ctpmenu"))
+        (valueOf("appid"), valueOf("timestamp"), valueOf("ctpmenu"), valueOf("mid"))
       })
       .filter(_._3 != null)
-      .map(t => ((appMap(t._1), dateFormat.format(t._2.toLong), t._3), 1))
+      .map(t => ((appMap(t._1), dateFormat.format(t._2.toLong), t._3, t._4), 1))
       .cache()
   }
 
