@@ -28,6 +28,7 @@ object VisitorMetrics {
     val dailyRdd = getDailyRddFromHBase(sc)
     val appMap = AppDAO.findAll.map(app => (app.appUrl -> app.appId)).toMap
 
+    generatePageData(dailyRdd, appMap)
     generatePageViewDailyReport(dailyRdd, appMap)
     generateUniqueVisitorDailyReport(dailyRdd, appMap)
     generateSessionDailyReport(dailyRdd, appMap)
@@ -93,6 +94,34 @@ object VisitorMetrics {
       val pairRdd = sc.parallelize(t._2.map(d => ((d._1, d._3), 1)).toSeq)
       archiveMetrics(pairRdd, browser, appMap)
     })
+  }
+
+  def generatePageData(dailyRdd: RDD[(String, String, String, String, String, String, String)], appMap: Map[String, Int]) = {
+    val pageRdd = dailyRdd.map(t => {
+      (t._1, t._4)
+    }).distinct()
+    .foreachPartition { p =>
+      val dao = new BaseDAO
+      dao.withConnection { con =>
+        val stmt = con.createStatement()
+        p.toList.foreach { t =>
+          val appId = appMap(t._1)
+          val page = t._2
+          val sql =
+            s"""
+               |insert into page(page_url, app_id)
+               |select '${page}', ${appId}
+               |from dual
+               |where not exists (
+               |select 1 from page where page_url = '${page}' and app_id = ${appId}
+               |);
+             """.stripMargin
+          stmt.addBatch(sql)
+        }
+        stmt.executeBatch()
+        stmt.close()
+      }
+    }
   }
 
   def archiveMetrics(pairRdd: RDD[((String, String), Int)], metricsName: String, appMap: Map[String, Int]) = {
