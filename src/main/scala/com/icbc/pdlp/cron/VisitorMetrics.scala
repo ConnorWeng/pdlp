@@ -31,9 +31,10 @@ object VisitorMetrics {
     generatePageViewDailyReport(dailyRdd, appMap)
     generateUniqueVisitorDailyReport(dailyRdd, appMap)
     generateSessionDailyReport(dailyRdd, appMap)
+    generateBrowserDailyReport(dailyRdd, appMap, sc)
   }
 
-  def getDailyRddFromHBase(sc: SparkContext): RDD[(String, String, String, String, String, String)] = {
+  def getDailyRddFromHBase(sc: SparkContext): RDD[(String, String, String, String, String, String, String)] = {
     val config = HBaseConfiguration.create()
     config.addResource(new Path(sys.env("HBASE_CONF_DIR"), "hbase-site.xml"))
     config.set(TableInputFormat.INPUT_TABLE, "page_event")
@@ -44,31 +45,54 @@ object VisitorMetrics {
     rdd.map(_._2)
       .map(r => {
         implicit val result = r
-        (valueOf("appid"), valueOf("mid"), valueOf("sid"), valueOf("page"), valueOf("timestamp"), valueOf("e"))
+        (valueOf("appid"), valueOf("mid"), valueOf("sid"), valueOf("page"), valueOf("timestamp"), valueOf("e"), valueOf("bv"))
       })
       .filter(_._6 == "pageload")
-      .map(t => t.copy[String, String, String, String, String, String](_5 = dateFormat.format(t._5.toLong)))
+      .map(t => t.copy[String, String, String, String, String, String, String](_5 = dateFormat.format(t._5.toLong)))
       .cache()
   }
 
-  def generatePageViewDailyReport(dailyRdd: RDD[(String, String, String, String, String, String)], appMap: Map[String, Int]) = {
+  def generatePageViewDailyReport(dailyRdd: RDD[(String, String, String, String, String, String, String)], appMap: Map[String, Int]) = {
     val pageViewRdd = dailyRdd.map(t => ((t._1, t._5), 1))
       .reduceByKey((a, b) => a + b)
     archiveMetrics(pageViewRdd, "pageview", appMap)
   }
 
-  def generateUniqueVisitorDailyReport(dailyRdd: RDD[(String, String, String, String, String, String)], appMap: Map[String, Int]) = {
+  def generateUniqueVisitorDailyReport(dailyRdd: RDD[(String, String, String, String, String, String, String)], appMap: Map[String, Int]) = {
     val uniqueVisitorDailyRdd = dailyRdd.map(t => ((t._1, t._2, t._5), 1))
       .distinct()
       .map(t => ((t._1._1, t._1._3), 1))
     archiveMetrics(uniqueVisitorDailyRdd, "uniquevisitor", appMap)
   }
 
-  def generateSessionDailyReport(dailyRdd: RDD[(String, String, String, String, String, String)], appMap: Map[String, Int]) = {
+  def generateSessionDailyReport(dailyRdd: RDD[(String, String, String, String, String, String, String)], appMap: Map[String, Int]) = {
     val sessionDailyRdd = dailyRdd.map(t => ((t._1, t._3, t._5), 1))
       .distinct()
       .map(t => ((t._1._1, t._1._3), 1))
     archiveMetrics(sessionDailyRdd, "session", appMap)
+  }
+
+  def generateBrowserDailyReport(dailyRdd: RDD[(String, String, String, String, String, String, String)], appMap: Map[String, Int], sc: SparkContext) = {
+    val browserDailyRdd = dailyRdd.map(t => {
+      val browser = t._7 match {
+        case bv if bv.contains("MSIE 6") => "IE6"
+        case bv if bv.contains("MSIE 7") => "IE7"
+        case bv if bv.contains("MSIE 8") => "IE8"
+        case bv if bv.contains("MSIE 9") => "IE9"
+        case bv if bv.contains("rv:11") => "IE11"
+        case bv if bv.contains("Chrome") => "Chrome"
+        case _ => "browser_unknown"
+      }
+      (t._1, t._2, t._5, browser)
+    })
+    .distinct()
+    .groupBy(_._4)
+    .collect()
+    .foreach(t => {
+      val browser = t._1
+      val pairRdd = sc.parallelize(t._2.map(d => ((d._1, d._3), 1)).toSeq)
+      archiveMetrics(pairRdd, browser, appMap)
+    })
   }
 
   def archiveMetrics(pairRdd: RDD[((String, String), Int)], metricsName: String, appMap: Map[String, Int]) = {
