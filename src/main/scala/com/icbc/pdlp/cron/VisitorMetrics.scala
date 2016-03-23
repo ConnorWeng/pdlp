@@ -2,7 +2,7 @@ package com.icbc.pdlp.cron
 
 import java.text.SimpleDateFormat
 
-import com.icbc.pdlp.db.{AppDAO, BaseDAO}
+import com.icbc.pdlp.db.DBService
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.Result
@@ -15,24 +15,10 @@ import org.apache.spark.{SparkConf, SparkContext}
 /**
   * Created by ConnorWeng on 2016/2/5.
   */
-object VisitorMetrics {
+trait VisitorMetrics {this: DBService =>
 
   def valueOf(columnName: String)(implicit result: Result): String = {
     Bytes.toString(result.getValue("pe".getBytes, columnName.getBytes))
-  }
-
-  def main(args: Array[String]) = {
-    val conf = new SparkConf().setAppName("pai-distributed-log-parser-VisitorMetrics").setMaster("local")
-    val sc = new SparkContext(conf)
-
-    val dailyRdd = getDailyRddFromHBase(sc)
-    val appMap = AppDAO.findAll.map(app => (app.appUrl -> app.appId)).toMap
-
-    generatePageData(dailyRdd, appMap)
-    generatePageViewDailyReport(dailyRdd, appMap)
-    generateUniqueVisitorDailyReport(dailyRdd, appMap)
-    generateSessionDailyReport(dailyRdd, appMap)
-    generateBrowserDailyReport(dailyRdd, appMap, sc)
   }
 
   def getDailyRddFromHBase(sc: SparkContext): RDD[(String, String, String, String, String, String, String)] = {
@@ -101,7 +87,6 @@ object VisitorMetrics {
       (t._1, t._4)
     }).distinct()
     .foreachPartition { p =>
-      val dao = new BaseDAO
       dao.withConnection { con =>
         val stmt = con.createStatement()
         p.toList.foreach { t =>
@@ -137,7 +122,6 @@ object VisitorMetrics {
 
   def insertMetrics(metricsRdd: RDD[(Int, String, Int)], metricsName: String) = {
     metricsRdd.foreachPartition { p =>
-      val dao = new BaseDAO
       dao.withConnection { con =>
         val stmt = con.createStatement()
         p.toList.foreach { t =>
@@ -169,4 +153,25 @@ object VisitorMetrics {
       }
     }
   }
+}
+
+object VisitorMetricsMain extends Serializable with VisitorMetrics with DBService {
+
+  val dao = new BaseDAO
+  val appDAO = new AppDAO
+
+  def main(args: Array[String]) = {
+    val conf = new SparkConf().setAppName("pai-distributed-log-parser-VisitorMetrics").setMaster("local")
+    val sc = new SparkContext(conf)
+
+    val dailyRdd = getDailyRddFromHBase(sc)
+    val appMap = appDAO.findAll.map(app => (app.appUrl -> app.appId)).toMap
+
+    generatePageData(dailyRdd, appMap)
+    generatePageViewDailyReport(dailyRdd, appMap)
+    generateUniqueVisitorDailyReport(dailyRdd, appMap)
+    generateSessionDailyReport(dailyRdd, appMap)
+    generateBrowserDailyReport(dailyRdd, appMap, sc)
+  }
+
 }

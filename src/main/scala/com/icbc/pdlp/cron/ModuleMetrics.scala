@@ -2,7 +2,7 @@ package com.icbc.pdlp.cron
 
 import java.text.SimpleDateFormat
 
-import com.icbc.pdlp.db.{AppDAO, BaseDAO}
+import com.icbc.pdlp.db.DBService
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.Result
@@ -15,39 +15,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 /**
   * Created by Connor on 2/15/16.
   */
-object ModuleMetrics {
-  def main (args: Array[String]) {
-    val conf = new SparkConf().setAppName("pai-distributed-log-parser-ModuleMetrics").setMaster("local")
-    val sc = new SparkContext(conf)
-
-    val appMap = AppDAO.findAll.map(app => (app.appUrl -> app.appId)).toMap
-    val moduleDailyRdd = getDailyRddFromHBase(sc, appMap)
-      .reduceByKey((a, b) => a + b)
-      .map(t => {
-        val appId = t._1._1
-        val date = t._1._2
-        val ctpmenu = t._1._3
-        val mid = t._1._4
-        val count = t._2
-        ((appId, date), (ctpmenu, count, mid))
-      })
-      .groupByKey()
-      .map(t => {
-        val appId = t._1._1
-        val date = t._1._2
-        val list = t._2.toList
-        val menuList = list
-          .groupBy(_._1)
-          .map(t => {
-            (t._1, t._2.map(_._2).sum, t._2.map(_._3).mkString(","))
-          })
-        var blob = "{"
-        menuList.foreach(bt => blob += s""""${bt._1}":[${bt._2},"${bt._3}"],""")
-        blob = blob.substring(0, blob.size - 1) + "}"
-        (appId, date, blob)
-      })
-    insertBlob(moduleDailyRdd, "module")
-  }
+trait ModuleMetrics {this: DBService =>
 
   def getDailyRddFromHBase(sc: SparkContext, appMap: Map[String,Int]): RDD[((Int, String, String, String), Int)] = {
     val config = HBaseConfiguration.create()
@@ -72,7 +40,6 @@ object ModuleMetrics {
 
   def insertBlob(blobRdd: RDD[(Int, String, String)], blobName: String) = {
     blobRdd.foreachPartition { p =>
-      val dao = new BaseDAO
       dao.withConnection { con =>
         val stmt = con.createStatement()
         p.toList.foreach { t =>
@@ -104,4 +71,44 @@ object ModuleMetrics {
       }
     }
   }
+}
+
+object ModuleMetricsMain extends Serializable with ModuleMetrics with DBService {
+
+  val dao = new BaseDAO
+  val appDAO = new AppDAO
+
+  def main (args: Array[String]) {
+    val conf = new SparkConf().setAppName("pai-distributed-log-parser-ModuleMetrics").setMaster("local")
+    val sc = new SparkContext(conf)
+
+    val appMap = appDAO.findAll.map(app => (app.appUrl -> app.appId)).toMap
+    val moduleDailyRdd = getDailyRddFromHBase(sc, appMap)
+      .reduceByKey((a, b) => a + b)
+      .map(t => {
+        val appId = t._1._1
+        val date = t._1._2
+        val ctpmenu = t._1._3
+        val mid = t._1._4
+        val count = t._2
+        ((appId, date), (ctpmenu, count, mid))
+      })
+      .groupByKey()
+      .map(t => {
+        val appId = t._1._1
+        val date = t._1._2
+        val list = t._2.toList
+        val menuList = list
+          .groupBy(_._1)
+          .map(t => {
+            (t._1, t._2.map(_._2).sum, t._2.map(_._3).mkString(","))
+          })
+        var blob = "{"
+        menuList.foreach(bt => blob += s""""${bt._1}":[${bt._2},"${bt._3}"],""")
+        blob = blob.substring(0, blob.size - 1) + "}"
+        (appId, date, blob)
+      })
+    insertBlob(moduleDailyRdd, "module")
+  }
+
 }
